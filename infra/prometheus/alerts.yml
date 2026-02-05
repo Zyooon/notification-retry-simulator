@@ -1,0 +1,22 @@
+groups:
+  - name: notification-retry-simulator
+    rules:
+      - alert: NotificationDLQDetected
+        expr: increase(notify_dlq_total[1m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+          service: notification-retry-simulator
+        annotations:
+          summary: "DLQ message detected"
+          description: "DLQ count increased in the last 1 minute. Check consumer logs and DLQ queue."
+
+      - alert: NotificationDuplicateSpike
+        expr: sum(increase(notify_duplicate_skip_total[1m])) > 5
+        for: 30s
+        labels:
+          severity: warning
+          service: notification-retry-simulator
+        annotations:
+          summary: "Duplicate skip spike"
+          description: "Duplicate skip count is high in the last 1 minute. Check idempotency keys and producer behavior."
