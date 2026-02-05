@@ -56,7 +56,7 @@ public class NotificationConsumer {
             }
 
             // 1) 전송 시도(랜덤 실패)
-            boolean fail = ThreadLocalRandom.current().nextInt(100) < 40;
+            boolean fail = ThreadLocalRandom.current().nextInt(100) < 80;
 
             if (!fail) {
                 // 성공 처리

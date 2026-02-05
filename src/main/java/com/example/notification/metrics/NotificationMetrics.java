@@ -10,16 +10,16 @@ import java.util.concurrent.TimeUnit;
 @Component
 public class NotificationMetrics {
 
+    private final MeterRegistry meterRegistry;
     private final Counter success;
     private final Counter retry;
-    private final Counter dlq;
     private final Counter skip;
     private final Timer processing;
 
     public NotificationMetrics(MeterRegistry meterRegistry) {
+        this.meterRegistry = meterRegistry;
         this.success = Counter.builder("notify_success_total").register(meterRegistry);
         this.retry = Counter.builder("notify_retry_total").register(meterRegistry);
-        this.dlq = Counter.builder("notify_dlq_total").register(meterRegistry);
         this.skip = Counter.builder("notify_skip_total").register(meterRegistry);
         this.processing = Timer.builder("notify_processing_seconds").register(meterRegistry);
     }
@@ -28,9 +28,18 @@ public class NotificationMetrics {
         switch (result) {
             case SUCCESS -> success.increment();
             case RETRY_PUBLISHED -> retry.increment();
-            case SENT_TO_DLQ -> dlq.increment();
             case SKIPPED_DUPLICATE -> skip.increment();
         }
+    }
+
+    // DLQ 전용 메서드 추가
+    public void recordDlq(String origin, String reason) {
+        Counter.builder("notify_dlq_total")
+                .description("Total number of messages sent to DLQ")
+                .tag("origin", origin)
+                .tag("reason", reason)
+                .register(meterRegistry)
+                .increment();
     }
 
     public void recordDurationNs(long durationNs) {
