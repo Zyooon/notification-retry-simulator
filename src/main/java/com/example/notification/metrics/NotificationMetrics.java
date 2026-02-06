@@ -15,7 +15,8 @@ public class NotificationMetrics {
     private final Counter success;
     private final Counter retry;
     private final Counter skip;
-    private final Counter replaySuccess; // 추가: 복구 성공 지표
+    private final Counter replaySuccess;
+    private final Counter poisonPill;
     private final Timer processing;
 
     public NotificationMetrics(MeterRegistry registry) {
@@ -35,6 +36,9 @@ public class NotificationMetrics {
         this.replaySuccess = Counter.builder("notify_replay_success_total")
                 .description("DLQ에서 메인 큐로 복구 성공한 수")
                 .register(registry);
+        this.poisonPill = Counter.builder("notify_poison_pill_total")
+            .description("데이터 결함으로 인해 격리된 메시지 수")
+            .register(registry);       
         this.processing = Timer.builder("notify_processing_seconds")
                 .register(registry);
     }
@@ -69,4 +73,7 @@ public class NotificationMetrics {
     public void recordPublish() {
         this.publish.increment();
     }
+    public void recordPoisonPill() {
+    this.poisonPill.increment();
+}
 }
