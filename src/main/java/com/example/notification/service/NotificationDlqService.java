@@ -48,7 +48,7 @@ public class NotificationDlqService {
                 // 멱등성 저장소에서 해당 키 해제 (다시 처리될 수 있도록)
                 idempotencyStore.release(msg.idempotencyKey());
 
-                metrics.recordPublish();
+                metrics.recordReplaySuccess();
 
                 // 메인 큐로 재전송 (재시도 횟수 초기화 및 리플레이 헤더 추가)
                 rabbitTemplate.convertAndSend(
