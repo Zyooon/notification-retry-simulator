@@ -10,18 +10,20 @@ import java.util.concurrent.TimeUnit;
 @Component
 public class NotificationMetrics {
 
-    private final MeterRegistry meterRegistry;
+    private final MeterRegistry registry;
+    private final Counter publish;
     private final Counter success;
     private final Counter retry;
     private final Counter skip;
     private final Timer processing;
 
-    public NotificationMetrics(MeterRegistry meterRegistry) {
-        this.meterRegistry = meterRegistry;
-        this.success = Counter.builder("notify_success_total").register(meterRegistry);
-        this.retry = Counter.builder("notify_retry_total").register(meterRegistry);
-        this.skip = Counter.builder("notify_skip_total").register(meterRegistry);
-        this.processing = Timer.builder("notify_processing_seconds").register(meterRegistry);
+    public NotificationMetrics(MeterRegistry registry) {
+        this.registry = registry;
+        this.publish = Counter.builder("notify_publish_total").register(registry);
+        this.success = Counter.builder("notify_success_total").register(registry);
+        this.retry = Counter.builder("notify_retry_total").register(registry);
+        this.skip = Counter.builder("notify_skip_total").register(registry);
+        this.processing = Timer.builder("notify_processing_seconds").register(registry);
     }
 
     public void recordResult(ConsumeResult result) {
@@ -38,11 +40,15 @@ public class NotificationMetrics {
                 .description("Total number of messages sent to DLQ")
                 .tag("origin", origin)
                 .tag("reason", reason)
-                .register(meterRegistry)
+                .register(registry)
                 .increment();
     }
 
     public void recordDurationNs(long durationNs) {
         processing.record(durationNs, TimeUnit.NANOSECONDS);
+    }
+
+    public void recordPublish() {
+        this.publish.increment();
     }
 }

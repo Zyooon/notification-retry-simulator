@@ -1,42 +1,38 @@
 package com.example.notification.api;
 
-import com.example.notification.config.RabbitMQConfig;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import lombok.RequiredArgsConstructor;
+
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.UUID;
+import com.example.notification.service.NotificationPublishService;
 
 @RestController
 @RequestMapping("/api/notifications")
+@RequiredArgsConstructor
 public class NotificationPublishController {
 
-    private final RabbitTemplate rabbitTemplate;
-
-    public NotificationPublishController(RabbitTemplate rabbitTemplate) {
-        this.rabbitTemplate = rabbitTemplate;
-    }
+    private final NotificationPublishService service;
 
     @PostMapping
-    public PublishResponse publish(@RequestBody PublishRequest req) {
-        String notificationId = UUID.randomUUID().toString();
-        String idempotencyKey = req.idempotencyKey() != null ? req.idempotencyKey() : notificationId;
+    public ResponseEntity<PublishResponse> publish(@RequestBody PublishRequest req) {
+        // 서비스 호출 및 결과 수신
+        NotificationPublishService.NotificationResult result = service.sendNotification(req.id(), req.payload());
 
-        NotificationMessage msg = new NotificationMessage(
-                notificationId,
-                0,
-                idempotencyKey,
-                req.payload()
-        );
-
-        rabbitTemplate.convertAndSend(
-                RabbitMQConfig.MAIN_EXCHANGE,
-                RabbitMQConfig.MAIN_KEY,
-                msg
-        );
-
-        return new PublishResponse(notificationId, idempotencyKey);
+        if (result.isSuccess()) {
+            return ResponseEntity.ok(new PublishResponse(
+                    result.id(),
+                    result.key(),
+                    "Success"));
+        } else {
+            // 전송 실패 시 500 에러 처리
+            return ResponseEntity.internalServerError().build();
+        }
     }
 
-    public record PublishRequest(String payload, String idempotencyKey) {}
-    public record PublishResponse(String notificationId, String idempotencyKey) {}
+    public record PublishRequest(String payload, String id) {
+    }
+
+    public record PublishResponse(String notificationId, String idempotencyKey, String status) {
+    }
 }
