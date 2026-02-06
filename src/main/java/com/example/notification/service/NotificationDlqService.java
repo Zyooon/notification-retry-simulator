@@ -4,7 +4,6 @@ import com.example.notification.api.NotificationMessage;
 import com.example.notification.config.RabbitMQConfig;
 import com.example.notification.idempotency.IdempotencyStore;
 import com.example.notification.metrics.NotificationMetrics;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -67,19 +66,6 @@ public class NotificationDlqService {
                 log.info("event=notify_replay_success idemKey={}", msg.idempotencyKey());
 
                 count++;
-
-            } catch (JsonProcessingException | NullPointerException | IllegalArgumentException e) {
-                // 데이터 결함형 에러
-                log.error("데이터 결함으로 인한 재처리 불가: {}. 메시지 격리 처리.", e.getMessage());
-
-                // 지표 기록
-                metrics.recordPoisonPill();
-
-                // 무한 루프 방지를 위해 일단 큐에서 제거하고 별도 보관
-                redisTemplate.opsForList().rightPop(REDIS_DLQ_LIST_KEY);
-                redisTemplate.opsForList().leftPush("notifications:dlq:dead", payload);
-
-                continue;
 
             } catch (Exception e) {
                 // 데이터는 정상이지만 환경 문제로 실패한 경우 > 루프 중단
