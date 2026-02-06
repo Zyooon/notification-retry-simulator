@@ -3,6 +3,7 @@ package com.example.notification.service;
 import com.example.notification.api.NotificationMessage;
 import com.example.notification.config.RabbitMQConfig;
 import com.example.notification.idempotency.IdempotencyStore;
+import com.example.notification.metrics.NotificationMetrics;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +22,7 @@ public class NotificationDlqService {
     private final IdempotencyStore idempotencyStore;
     private final StringRedisTemplate redisTemplate;
     private final ObjectMapper objectMapper;
+    private final NotificationMetrics metrics;
 
     private static final String REDIS_DLQ_LIST_KEY = "notifications:dlq:list";
 
@@ -45,6 +47,8 @@ public class NotificationDlqService {
 
                 // 멱등성 저장소에서 해당 키 해제 (다시 처리될 수 있도록)
                 idempotencyStore.release(msg.idempotencyKey());
+
+                metrics.recordPublish();
 
                 // 메인 큐로 재전송 (재시도 횟수 초기화 및 리플레이 헤더 추가)
                 rabbitTemplate.convertAndSend(
